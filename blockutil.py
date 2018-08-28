@@ -1,6 +1,7 @@
 import requests
 import sys
 
+
 BLOCKCHAIN_API = ''
 
 
@@ -8,12 +9,12 @@ def hash_str(bytebuffer):
     return "".join(("%02x" % a) for a in bytebuffer)
 
 
-def transform_json(raw_block):
+def transform_json(raw_block, tx_type_counter):
     transaction_ids = []
     transactions = []
     for raw_tx in raw_block["tx"]:
         tx = []
-        tx.append(bytearray.fromhex(raw_tx["hash"]))
+        tx.append(bytearray.fromhex(raw_tx["txid"]))
         tx.append(raw_block["height"])
         tx.append(raw_block["time"])
         tx.append(raw_block["size"])
@@ -39,11 +40,15 @@ def transform_json(raw_block):
                 vout.append(int(raw_vout["value"] * 1e8 + 0.1))
             if "n" in raw_vout.keys():
                 vout.append(raw_vout["n"])
-            adresses = []
             if "scriptPubKey" in raw_vout.keys():
-                if "addresses" in raw_vout["scriptPubKey"].keys():
-                    adresses = raw_vout["scriptPubKey"]["addresses"]
-            vout.append(adresses)
+                script_pubkey = raw_vout["scriptPubKey"]
+                tx_type_counter[script_pubkey["type"]] += 1
+                addr = []
+                if "addresses" in script_pubkey.keys():
+                    addr = script_pubkey["addresses"]
+                else:
+                    tx_type_counter["tx_not_captured"] += 1
+            vout.append(addr)
             vouts.append(vout)
         tx.append(vouts)
         transactions.append(tx)
